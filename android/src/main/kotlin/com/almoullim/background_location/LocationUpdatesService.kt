@@ -1,20 +1,21 @@
 package com.almoullim.background_location
 
-import android.app.*
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.location.Location
 import android.os.*
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.location.*
-import com.almoullim.background_location.Utils
-
 
 class LocationUpdatesService : Service() {
-
     override fun onBind(intent: Intent?): IBinder? {
         return mBinder
     }
@@ -26,9 +27,8 @@ class LocationUpdatesService : Service() {
     private var mLocationCallback: LocationCallback? = null
     private var mLocation: Location? = null
 
-
     companion object {
-
+        private  val META_CUSTOM_ICON = "com.almoullim.background_location.custom_icon";
         private val PACKAGE_NAME = "com.google.android.gms.location.sample.locationupdatesforegroundservice"
         private val TAG = LocationUpdatesService::class.java.simpleName
         private val CHANNEL_ID = "channel_01"
@@ -46,50 +46,45 @@ class LocationUpdatesService : Service() {
 
     private val notification: Notification
         get() {
-            val intent = Intent(this, LocationUpdatesService::class.java)
-            intent.putExtra(EXTRA_STARTED_FROM_NOTIFICATION, true)
-            
-            val builder = NotificationCompat.Builder(this)
+            var icon = R.drawable.navigation_empty_icon;
+            val metaData = packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA).metaData;
+
+            if (metaData != null && metaData.containsKey(META_CUSTOM_ICON)) {
+                icon = metaData.getInt(META_CUSTOM_ICON);
+            }
+
+            return NotificationCompat.Builder(this, CHANNEL_ID)
                     .setContentTitle("Background service is running")
                     .setOngoing(true)
                     .setSound(null)
                     .setPriority(Notification.PRIORITY_HIGH)
-                    .setSmallIcon(R.drawable.navigation_empty_icon)
+                    .setSmallIcon(icon)
                     .setWhen(System.currentTimeMillis())
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                builder.setChannelId(CHANNEL_ID)
-            }
-
-            return builder.build()
+                    .build()
         }
 
     private var mServiceHandler: Handler? = null
 
     override fun onCreate() {
-
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
         mLocationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult?) {
                 super.onLocationResult(locationResult)
-
-
-
                 onNewLocation(locationResult!!.lastLocation)
             }
         }
+
         createLocationRequest()
         getLastLocation()
-
 
         val handlerThread = HandlerThread(TAG)
         handlerThread.start()
         mServiceHandler = Handler(handlerThread.looper)
 
-
         mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Application Name"
+            val name = "Background Service"
             val mChannel = NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW)
             mChannel.setSound(null, null)
             mNotificationManager!!.createNotificationChannel(mChannel)
@@ -97,24 +92,18 @@ class LocationUpdatesService : Service() {
 
         startForeground(NOTIFICATION_ID, notification)
 
-
         broadcastReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-
                 if (intent?.action == "stop_service") {
                     removeLocationUpdates()
                 }
-
             }
         }
-
 
         val filter = IntentFilter()
         filter.addAction(STOP_SERVICE)
         registerReceiver(broadcastReceiver, filter)
-
     }
-
 
     fun requestLocationUpdates() {
         Utils.setRequestingLocationUpdates(this, true)
@@ -125,7 +114,6 @@ class LocationUpdatesService : Service() {
             Utils.setRequestingLocationUpdates(this, false)
         }
     }
-
 
     fun removeLocationUpdates() {
         try {
@@ -140,19 +128,16 @@ class LocationUpdatesService : Service() {
 
     }
 
-
     private fun getLastLocation() {
         try {
             mFusedLocationClient!!.lastLocation
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful && task.result != null) {
                             mLocation = task.result
-                        } else {
                         }
                     }
         } catch (unlikely: SecurityException) {
         }
-
     }
 
     private fun onNewLocation(location: Location) {
@@ -162,7 +147,6 @@ class LocationUpdatesService : Service() {
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
     }
 
-
     private fun createLocationRequest() {
         mLocationRequest = LocationRequest()
         mLocationRequest!!.interval = UPDATE_INTERVAL_IN_MILLISECONDS
@@ -170,17 +154,13 @@ class LocationUpdatesService : Service() {
         mLocationRequest!!.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
     }
 
-
     inner class LocalBinder : Binder() {
         internal val service: LocationUpdatesService
             get() = this@LocationUpdatesService
     }
 
-
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(broadcastReceiver)
-
     }
-
 }

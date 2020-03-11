@@ -20,10 +20,7 @@ import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry
 import io.flutter.plugin.common.PluginRegistry.Registrar
 
-
 class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPermissionsResultListener {
-
-
     private lateinit var registrar: Registrar
     private lateinit var channel: MethodChannel
     private var myReceiver: MyReceiver? = null
@@ -41,11 +38,9 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
         private const val REQUEST_PERMISSIONS_REQUEST_CODE = 34
     }
 
-
     constructor(registrar: Registrar, channel: MethodChannel) : this() {
         this.registrar = registrar
         this.channel = channel
-
 
         myReceiver = MyReceiver()
 
@@ -58,14 +53,9 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                 IntentFilter(LocationUpdatesService.ACTION_BROADCAST))
     }
 
-
     override fun onMethodCall(call: MethodCall, result: Result) {
-
-
         when {
-
             call.method == "stop_location_service" -> {
-
                 mService?.removeLocationUpdates()
 
                 LocalBroadcastManager.getInstance(registrar.activeContext()).unregisterReceiver(myReceiver!!)
@@ -74,8 +64,8 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                     registrar.activeContext().unbindService(mServiceConnection)
                     mBound = false
                 }
-
             }
+
             call.method == "start_location_service" -> {
                 LocalBroadcastManager.getInstance(registrar.activeContext()).registerReceiver(myReceiver!!,
                         IntentFilter(LocationUpdatesService.ACTION_BROADCAST))
@@ -89,8 +79,6 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
             }
             else -> result.notImplemented()
         }
-
-
     }
 
 
@@ -107,21 +95,15 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
         }
     }
 
-
     private fun requestLocation() {
-
         if (!checkPermissions()) {
             requestPermissions()
         } else {
             mService!!.requestLocationUpdates()
         }
-
-
     }
 
-
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>?, grantResults: IntArray?): Boolean {
-
         Log.i(TAG, "onRequestPermissionResult")
         if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
             when {
@@ -131,7 +113,6 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
             }
         }
         return true
-
     }
 
     private inner class MyReceiver : BroadcastReceiver() {
@@ -158,11 +139,10 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
     private fun requestPermissions() {
         val shouldProvideRationale = ActivityCompat.shouldShowRequestPermissionRationale(registrar.activity(),
                 Manifest.permission.ACCESS_FINE_LOCATION)
-        if (shouldProvideRationale) {
 
+        if (shouldProvideRationale) {
             Log.i(TAG, "Displaying permission rationale to provide additional context.")
             Toast.makeText(registrar.activeContext(), R.string.permission_rationale, Toast.LENGTH_LONG).show()
-
         } else {
             Log.i(TAG, "Requesting permission")
             ActivityCompat.requestPermissions(registrar.activity(),
@@ -170,6 +150,4 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                     REQUEST_PERMISSIONS_REQUEST_CODE)
         }
     }
-
-
 }
